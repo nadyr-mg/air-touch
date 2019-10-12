@@ -21,7 +21,7 @@ SIG: pin #6
 #include "Mouse.h"
 
 //const
-double PRESSING_BOUNDARY = 0.8;  // how low distance should drop for mouse press to be performed
+double PRESSING_BOUNDARY = 0.94;  // how low distance should drop for mouse press to be performed
 
 int LEFT_SENSOR = 1;
 int RIGHT_SENSOR = 2;
@@ -32,7 +32,11 @@ int PRESS_MODE = 1;
 int INSTANT_CLICK_DELAY = 200;
 int PRESS_DELAY = 300;
 
+int TAKE_MEASURES_EVERY = 100 // by default it's 30 ms
+
 int SWITCH_BTN_PIN = 7; // ~7
+
+unsigned long ENTER_PRESS_MODE_DELAY = 700;
 
 // LEFT
 VL53L0X l_sensor;
@@ -46,9 +50,11 @@ int r_max_dist = 0;
 uint8_t r_address = 0x32;
 int r_xshut_pin = 10; // ~10
 
-int cur_mouse_mode = CLICK_MODE;  // by default
+int cur_mouse_mode = PRESS_MODE;  // by default
 
 int l_prev_state, r_prev_state;
+
+unsigned long enter_high_mode_time = 0;
 
 int get_dist(VL53L0X sensor) {
   return sensor.readRangeContinuousMillimeters();
@@ -103,7 +109,7 @@ void setup()
   init_sensors();
   // LEFT SENSOR
   l_sensor.setTimeout(500);
-  l_sensor.startContinuous();
+  l_sensor.startContinuous(TAKE_MEASURES_EVERY);
 
   l_max_dist = get_dist(l_sensor);
   Serial.print("Setup l_max_dist: ");
@@ -114,7 +120,7 @@ void setup()
   
   // RIGHT SENSOR
   r_sensor.setTimeout(500);
-  r_sensor.startContinuous();
+  r_sensor.startContinuous(TAKE_MEASURES_EVERY);
 
   r_max_dist = get_dist(r_sensor);
   Serial.print("Setup r_max_dist: ");
@@ -150,17 +156,26 @@ int signal_state(int dist, int max_dist) {
 }
 
 void mouse_press_action(int state, int mouse) {
-  if (state == HIGH) {  
-    if (!Mouse.isPressed(mouse)) {
+  unsigned long cur_time = millis();
+
+  if (state == HIGH) {
+    if (enter_high_mode_time == 0) {
+      // first entrance
       Mouse.click(mouse);
+      enter_high_mode_time = cur_time;
+    }
+
+    if (cur_time - enter_high_mode_time > ENTER_PRESS_MODE_DELAY  && !Mouse.isPressed(mouse)) {
       Mouse.press(mouse);
       delay(PRESS_DELAY);
     }
-  } else {
+
+  } else {  // state == LOW
     if (Mouse.isPressed(mouse)) {
       Mouse.release(mouse);
-      // delay(100);
     }
+
+    enter_high_mode_time = 0;
   }
 }
 
@@ -190,7 +205,7 @@ int handle_sensor(int prev_state, int sensor_choice) {
   int dist = get_dist(sensor);
   int state = signal_state(dist, max_dist);
   
-  if (cur_mouse_mode == CLICK_MODE) {
+  if (cur_mouse_mode == CLICK_MODE || sensor_choice == RIGHT_SENSOR) {
     mouse_click_action(prev_state, state, mouse);
   } else {
     mouse_press_action(state, mouse);
