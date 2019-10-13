@@ -52,7 +52,8 @@ int r_xshut_pin = 10; // ~10
 
 int cur_mouse_mode = PRESS_MODE;  // by default
 
-int l_prev_state, r_prev_state;
+int l_prev_state = LOW;
+int r_prev_state = LOW;
 
 unsigned long enter_high_state_time = 0;
 
@@ -183,6 +184,10 @@ void mouse_press_action(int state, int mouse) {
 void mouse_click_action(int prev_state, int state, int mouse) {
   if (state == HIGH) {
     if (prev_state == LOW) {
+      if (Mouse.isPressed(mouse)) {
+        Mouse.release(mouse);
+      }
+      
       Mouse.click(mouse);
       delay(INSTANT_CLICK_DELAY);
     }
@@ -237,4 +242,5 @@ void loop()
   //switch_modes();
   l_prev_state = handle_sensor(l_prev_state, LEFT_SENSOR);
   r_prev_state = handle_sensor(r_prev_state, RIGHT_SENSOR);
+
 }
