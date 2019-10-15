@@ -95,15 +95,13 @@ void init_sensors() {
 void setup()
 {
   // mouse setup
-  pinMode(12,INPUT_PULLUP);
-  digitalWrite(12,HIGH);
   Mouse.begin();
   
   // serial port setup
   Serial.begin(9600);
   
   // sensor button setup
-  pinMode(SWITCH_BTN_PIN, INPUT);
+  // pinMode(SWITCH_BTN_PIN, INPUT);
   
   Wire.begin();
   // setup sensors addresses
@@ -149,7 +147,7 @@ int signal_state(int dist, int max_dist) {
   int state = LOW;
     
   double boundary_dist = max_dist * PRESSING_BOUNDARY;
-  if (dist < boundary_dist) {
+  if ((doubl)dist < boundary_dist) {
     state = HIGH;
   }
   
@@ -186,6 +184,7 @@ void mouse_click_action(int prev_state, int state, int mouse) {
     if (prev_state == LOW) {
       if (Mouse.isPressed(mouse)) {
         Mouse.release(mouse);
+        //delay(PRESS_DELAY);
       }
       
       Mouse.click(mouse);
