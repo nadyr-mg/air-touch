@@ -173,7 +173,6 @@ void mouse_press_action(int state, int mouse) {
   } else { // state == LOW
     if (Mouse.isPressed(mouse)) {
       Mouse.release(mouse);
-      //delay(PRESS_DELAY);
     }
     enter_high_state_time = 0;
   }
@@ -184,7 +183,6 @@ void mouse_click_action(int prev_state, int state, int mouse) {
     if (prev_state == LOW) {
       if (Mouse.isPressed(mouse)) {
         Mouse.release(mouse);
-        //delay(PRESS_DELAY);
       }
       
       Mouse.click(mouse);
