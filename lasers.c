@@ -158,25 +158,26 @@ int signal_state(int dist, int max_dist) {
 
 void mouse_press_action(int state, int mouse) {
   unsigned long cur_time = millis();
+  bool is_pressed = Mouse.isPressed(mouse);
 
   if (state == HIGH) {
     if (enter_high_state_time == 0) {
       // first entrance
       enter_high_state_time = cur_time;
-      if (Mouse.isPressed(mouse)) {
+      if (is_pressed) {
         Mouse.release(mouse);
       }
       Mouse.click(mouse);
     }
 
     if (cur_time - enter_high_state_time >= TRIGGER_PRESS_TIME) {
-      if (!Mouse.isPressed(mouse)) {
+      if (!is_pressed) {
         Mouse.press(mouse);
       }
     }
 
   } else { // state == LOW
-    if (Mouse.isPressed(mouse)) {
+    if (is_pressed) {
       Mouse.release(mouse);
     }
     enter_high_state_time = 0;
