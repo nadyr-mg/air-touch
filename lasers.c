@@ -21,7 +21,7 @@
 #include "Mouse.h"
 
 //const
-double PRESSING_BOUNDARY = 0.94; //how low distance should drop for mouse press to be performed
+double PRESSING_BOUNDARY = 0.9; //how low distance should drop for mouse press to be performed
 
 int LEFT_SENSOR = 1;
 int RIGHT_SENSOR = 2;
@@ -75,21 +75,29 @@ void init_sensors() {
   delay(150);
   l_sensor.init(true);
 
-  Serial.println("01");
+  /*  Serial.println("01");*/
   delay(100);
   l_sensor.setAddress((uint8_t)l_address);
-  Serial.println("02");
+  /*  Serial.println("02");*/
 
   // right sensor setup
   pinMode(r_xshut_pin, INPUT);
   delay(150);
   r_sensor.init(true);
-  Serial.println("03");
+  /*  Serial.println("03");*/
   delay(100);
   r_sensor.setAddress((uint8_t)r_address);
-  Serial.println("04");
+  /*  Serial.println("04");
 
-  Serial.println("addresses set");
+    Serial.println("addresses set");*/
+
+  // LEFT SENSOR
+  l_sensor.setTimeout(500);
+  l_sensor.startContinuous(TAKE_MEASURE_EVERY);
+
+  // RIGHT SENSOR
+  r_sensor.setTimeout(500);
+  r_sensor.startContinuous(TAKE_MEASURE_EVERY);
 }
 
 void setup()
@@ -103,12 +111,10 @@ void setup()
   // sensor button setup
   // pinMode(SWITCH_BTN_PIN, INPUT);
 
-  Wire.begin();
+
   // setup sensors addresses
   init_sensors();
-  // LEFT SENSOR
-  l_sensor.setTimeout(500);
-  l_sensor.startContinuous(TAKE_MEASURE_EVERY);
+
 
   l_max_dist = get_dist(l_sensor);
   Serial.print("Setup l_max_dist: ");
@@ -117,9 +123,6 @@ void setup()
   Serial.print("Left sensor address: ");
   Serial.println(l_sensor.getAddress());
 
-  // RIGHT SENSOR
-  r_sensor.setTimeout(500);
-  r_sensor.startContinuous(TAKE_MEASURE_EVERY);
 
   r_max_dist = get_dist(r_sensor);
   Serial.print("Setup r_max_dist: ");
@@ -179,6 +182,7 @@ void mouse_press_action(int state, int mouse) {
   } else { // state == LOW
     if (is_pressed) {
       Mouse.release(mouse);
+      // init_sensors();
     }
     enter_high_state_time = 0;
   }
@@ -242,6 +246,8 @@ void switch_modes() {
 
 void loop()
 {
+
+
   //switch_modes();
   l_prev_state = handle_sensor(l_prev_state, LEFT_SENSOR);
   r_prev_state = handle_sensor(r_prev_state, RIGHT_SENSOR);
