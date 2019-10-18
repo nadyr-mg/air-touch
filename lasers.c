@@ -38,6 +38,8 @@ uint32_t TAKE_MEASURE_EVERY = 80;
 
 int SWITCH_BTN_PIN = 7; // ~7
 
+const int ledPin = LED_BUILTIN;
+
 // LEFT
 VL53L0X l_sensor;
 int l_max_dist = 0;
@@ -56,6 +58,8 @@ int l_prev_state = LOW;
 int r_prev_state = LOW;
 
 unsigned long enter_high_state_time = 0;
+
+void(* resetFunc) (void) = 0;
 
 int get_dist(VL53L0X sensor) {
   return sensor.readRangeContinuousMillimeters();
@@ -102,6 +106,9 @@ void init_sensors() {
 
 void setup()
 {
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, HIGH);
+  
   // mouse setup
   Mouse.begin();
 
@@ -111,10 +118,8 @@ void setup()
   // sensor button setup
   // pinMode(SWITCH_BTN_PIN, INPUT);
 
-
   // setup sensors addresses
   init_sensors();
-
 
   l_max_dist = get_dist(l_sensor);
   Serial.print("Setup l_max_dist: ");
@@ -130,6 +135,8 @@ void setup()
 
   Serial.print("Right sensor address: ");
   Serial.println(r_sensor.getAddress());
+  
+  digitalWrite(ledPin, LOW);
 }
 
 void print_dist(int sensor_choice, int dist) {
@@ -244,12 +251,21 @@ void switch_modes() {
   }
 }
 
+unsigned long loop_count = 0;
+unsigned long LOOP_COUNT_RESET = 18000;  // ~30 mins
+
 void loop()
 {
-
-
   //switch_modes();
   l_prev_state = handle_sensor(l_prev_state, LEFT_SENSOR);
   r_prev_state = handle_sensor(r_prev_state, RIGHT_SENSOR);
-
+  
+  if (loop_count > LOOP_COUNT_RESET) {
+    loop_count = 0;
+    resetFunc();
+  }
+  
+  Serial.println(loop_count);
+  
+  loop_count += 1;
 }
