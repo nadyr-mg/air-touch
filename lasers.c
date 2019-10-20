@@ -20,23 +20,20 @@
 #include <VL53L0X.h>
 #include "Mouse.h"
 
-//const
-double PRESSING_BOUNDARY = 0.9; //how low distance should drop for mouse press to be performed
+bool DEBUG = true;
+
+const double PRESSING_BOUNDARY = 0.9; //how low distance should drop for mouse press to be performed
 
 int LEFT_SENSOR = 1;
 int RIGHT_SENSOR = 2;
 
-int CLICK_MODE = 0;
-int PRESS_MODE = 1;
-
 int INSTANT_CLICK_DELAY = 500;
-int PRESS_DELAY = 500;
 unsigned long TRIGGER_PRESS_TIME = 600;
 
 // by default sensor measures every ~30 ms
 uint32_t TAKE_MEASURE_EVERY = 80;
-
-int SWITCH_BTN_PIN = 7; // ~7
+uint16_t TIMEOUT = 500;
+uint32_t TIME_BUDGET = 60000;
 
 const int ledPin = LED_BUILTIN;
 
@@ -52,8 +49,6 @@ int r_max_dist = 0;
 uint8_t r_address = 0x32;
 int r_xshut_pin = 10; // ~10
 
-int cur_mouse_mode = PRESS_MODE;  // by default
-
 int l_prev_state = LOW;
 int r_prev_state = LOW;
 
@@ -63,6 +58,41 @@ int get_dist(VL53L0X sensor) {
   return sensor.readRangeContinuousMillimeters();
 }
 
+void resettable_init() {
+  // LEFT SENSOR
+  l_sensor.setTimeout(TIMEOUT);
+  bool success = l_sensor.setMeasurementTimingBudget(TIME_BUDGET);
+  if (success == false) {
+    Serial.println("Can't establish time budget");
+  }
+  else {
+    Serial.println("Time budget established");
+  }
+  l_sensor.startContinuous(TAKE_MEASURE_EVERY);
+
+  // RIGHT SENSOR
+  r_sensor.setTimeout(TIMEOUT);
+  success = r_sensor.setMeasurementTimingBudget(TIME_BUDGET);
+  if (success == false) {
+    Serial.println("Can't establish time budget");
+  }
+  else {
+    Serial.println("Time budget established");
+  }
+  r_sensor.startContinuous(TAKE_MEASURE_EVERY);
+}
+
+void full_reset() {
+  digitalWrite(ledPin, HIGH);
+  l_sensor.stopContinuous();
+  delay(200);
+  r_sensor.stopContinuous();
+  delay(200);
+  init_sensors();
+  delay(200);
+  digitalWrite(ledPin, LOW);
+}
+
 void init_sensors() {
   pinMode(l_xshut_pin, OUTPUT);
   pinMode(r_xshut_pin, OUTPUT);
@@ -70,51 +100,37 @@ void init_sensors() {
   digitalWrite(l_xshut_pin, LOW);
   delay(500);
 
-  Wire.begin();
-
   // left sensor setup
   pinMode(l_xshut_pin, INPUT);
   delay(150);
   l_sensor.init(true);
 
-  /*  Serial.println("01");*/
   delay(100);
   l_sensor.setAddress((uint8_t)l_address);
-  /*  Serial.println("02");*/
 
   // right sensor setup
   pinMode(r_xshut_pin, INPUT);
   delay(150);
   r_sensor.init(true);
-  /*  Serial.println("03");*/
+
   delay(100);
   r_sensor.setAddress((uint8_t)r_address);
-  /*  Serial.println("04");
 
-    Serial.println("addresses set");*/
-
-  // LEFT SENSOR
-  l_sensor.setTimeout(500);
-  l_sensor.startContinuous(TAKE_MEASURE_EVERY);
-
-  // RIGHT SENSOR
-  r_sensor.setTimeout(500);
-  r_sensor.startContinuous(TAKE_MEASURE_EVERY);
+  resettable_init();
 }
 
 void setup()
 {
   pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, HIGH);
+  //digitalWrite(ledPin, HIGH);
 
   // mouse setup
   Mouse.begin();
+  
+  Wire.begin();
 
   // serial port setup
   Serial.begin(9600);
-
-  // sensor button setup
-  // pinMode(SWITCH_BTN_PIN, INPUT);
 
   // setup sensors addresses
   init_sensors();
@@ -126,7 +142,6 @@ void setup()
   Serial.print("Left sensor address: ");
   Serial.println(l_sensor.getAddress());
 
-
   r_max_dist = get_dist(r_sensor);
   Serial.print("Setup r_max_dist: ");
   Serial.println(r_max_dist);
@@ -134,7 +149,7 @@ void setup()
   Serial.print("Right sensor address: ");
   Serial.println(r_sensor.getAddress());
 
-  digitalWrite(ledPin, LOW);
+  //digitalWrite(ledPin, LOW);
 }
 
 void print_dist(int sensor_choice, int dist) {
@@ -221,33 +236,25 @@ int handle_sensor(int prev_state, int sensor_choice) {
   }
 
   int dist = get_dist(sensor);
+  if (dist == -1) {
+    full_reset();  // return LOW state (no click)
+    return LOW;
+  }
+  
   int state = signal_state(dist, max_dist);
 
-  if (cur_mouse_mode == CLICK_MODE || sensor_choice == RIGHT_SENSOR) {
+  if (sensor_choice == RIGHT_SENSOR) {
     mouse_click_action(prev_state, state, mouse);
   } else {
     mouse_press_action(state, mouse);
   }
-
-  print_dist(sensor_choice, dist);
+  if (DEBUG) {
+    print_dist(sensor_choice, dist);
+  }
 
   return state;
 }
 
-void switch_modes() {
-  int btn_state = digitalRead(SWITCH_BTN_PIN);
-
-  if (btn_state == HIGH) {
-    cur_mouse_mode = (cur_mouse_mode + 1) % 2; // switch between 1 and 2
-
-    if (cur_mouse_mode == CLICK_MODE) {
-      Serial.println("Switched to CLICKING MODE");
-    } else {
-      Serial.println("Switched to PRESSING MODE");
-    }
-    delay(1500);
-  }
-}
 
 unsigned long loop_count = 0;
 unsigned long LOOP_COUNT_RESET = 9000;  // ~15 mins
@@ -258,19 +265,13 @@ void loop()
   l_prev_state = handle_sensor(l_prev_state, LEFT_SENSOR);
   r_prev_state = handle_sensor(r_prev_state, RIGHT_SENSOR);
 
-  if (loop_count > LOOP_COUNT_RESET) {
-    loop_count = 0;
-    
-    // LEFT SENSOR
-    l_sensor.setTimeout(500);
-    l_sensor.startContinuous(TAKE_MEASURE_EVERY);
+  // if (loop_count > LOOP_COUNT_RESET) {
+  //   loop_count = 0;
+  // }
 
-    // RIGHT SENSOR
-    r_sensor.setTimeout(500);
-    r_sensor.startContinuous(TAKE_MEASURE_EVERY);
-  }
+  // if (DEBUG) {
+  //   Serial.println(loop_count);
+  // }
 
-  Serial.println(loop_count);
-
-  loop_count += 1;
+  // loop_count += 1;
 }
