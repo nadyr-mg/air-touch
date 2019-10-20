@@ -56,14 +56,16 @@ unsigned long enter_high_state_time = 0;
 
 uint16_t get_dist(VL53L0X sensor) {
   uint16_t dist = sensor.readRangeContinuousMillimeters();
-  if (dist == -1) {
+  if (dist == -1 || dist == 65535) {
     full_reset();
   }
   return dist;
 }
 
 void full_reset() {
-  //delay(1000);
+  digitalWrite(ledPin, HIGH);
+  delay(2000);
+  digitalWrite(ledPin, LOW);
   digitalWrite(RESET_PIN, LOW);
 }
 
@@ -206,7 +208,6 @@ void mouse_press_action(int state, int mouse) {
   } else { // state == LOW
     if (is_pressed) {
       Mouse.release(mouse);
-      // init_sensors();
     }
     enter_high_state_time = 0;
   }
@@ -261,7 +262,6 @@ unsigned long LOOP_COUNT_RESET = 9000;  // ~15 mins
 
 void loop()
 {
-  //switch_modes();
   l_prev_state = handle_sensor(l_prev_state, LEFT_SENSOR);
   r_prev_state = handle_sensor(r_prev_state, RIGHT_SENSOR);
 
@@ -269,9 +269,9 @@ void loop()
   //   loop_count = 0;
   // }
 
-  // if (DEBUG) {
-  //   Serial.println(loop_count);
-  // }
+  if (DEBUG) {
+    Serial.println(loop_count);
+  }
 
-  // loop_count += 1;
+  loop_count += 1;
 }
