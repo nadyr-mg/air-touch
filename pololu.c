@@ -39,13 +39,13 @@ const int RESET_PIN = 12;
 // LEFT
 VL53L0X l_sensor;
 uint16_t l_max_dist = 0;
-uint8_t l_address = 0x40;
+uint8_t l_address = 0x30;
 int l_xshut_pin = 9; // ~9
 
 // RIGHT
 VL53L0X r_sensor;
 uint16_t r_max_dist = 0;
-uint8_t r_address = 0x20;
+uint8_t r_address = 0x38;
 int r_xshut_pin = 10; // ~10
 
 int l_prev_state = LOW;
