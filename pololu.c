@@ -23,6 +23,8 @@ const double PRESSING_BOUNDARY = 0.94; //how low distance should drop for mouse 
 const uint16_t L_LEAST_MAX_DIST = 270;
 const uint16_t R_LEAST_MAX_DIST = 225;
 
+const int INIT_MEASURES = 10;
+
 int LEFT_SENSOR = 1;
 int RIGHT_SENSOR = 2;
 
@@ -80,10 +82,18 @@ uint16_t get_max_dist(int sensor_choice) {
         least_max_dist = R_LEAST_MAX_DIST;
     }
 
-    uint16_t max_dist = get_dist(sensor_choice);
-    if (max_dist < least_max_dist) {
-        full_reset();
+    unsigned long sum = 0;
+    uint16_t max_dist;
+    for (int measure = 0; measure < INIT_MEASURES; measure++) {
+        max_dist = get_dist(sensor_choice);
+        if (max_dist < least_max_dist) {
+            full_reset();
+        }
+
+        sum += max_dist;
     }
+
+    max_dist = (uint16_t)(sum / INIT_MEASURES);
     return max_dist;
 }
 
