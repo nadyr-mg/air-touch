@@ -8,10 +8,6 @@
 
   Right laser:
   VIN, GND: on breadboard (3.3V)
-  SDA, SCL: pin #2, pin #3
-  XShut: pin #10
-
-  Reset pin: #12
 */
 
 #include <Wire.h>
@@ -63,9 +59,9 @@ uint16_t get_dist(VL53L0X sensor) {
 }
 
 void full_reset() {
-  digitalWrite(ledPin, HIGH);
-  delay(2000);
-  digitalWrite(ledPin, LOW);
+  //digitalWrite(ledPin, HIGH);
+  // delay(2000);
+  // digitalWrite(ledPin, LOW);
   digitalWrite(RESET_PIN, LOW);
 }
 
@@ -126,13 +122,13 @@ void setup()
   digitalWrite(RESET_PIN, HIGH);
   delay(200);
   pinMode(RESET_PIN, OUTPUT);
-  
+
   pinMode(ledPin, OUTPUT);
   //digitalWrite(ledPin, HIGH);
 
   // mouse setup
   Mouse.begin();
-  
+
   Wire.begin();
 
   // serial port setup
@@ -241,7 +237,7 @@ int handle_sensor(int prev_state, int sensor_choice) {
   }
 
   uint16_t dist = get_dist(sensor);
-  
+
   int state = signal_state(dist, max_dist);
 
   if (sensor_choice == RIGHT_SENSOR) {
