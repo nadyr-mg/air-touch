@@ -2,12 +2,12 @@
   Wiring:
 
   Left laser:
-  VIN, GND: on breadboard (3.3V)
+  VIN, GND: on breadboard (5V)
   SDA, SCL: SDA, SCL on arduino
   XShut: pin #9
 
   Right laser:
-  VIN, GND: on breadboard (3.3V)
+  VIN, GND: on breadboard (5V)
   SDA, SCL: pin #2, pin #3
   XShut: pin #10
   Reset pin: #12
@@ -19,7 +19,9 @@
 
 bool DEBUG = true;
 
-const double PRESSING_BOUNDARY = 0.9; //how low distance should drop for mouse press to be performed
+const double PRESSING_BOUNDARY = 0.94; //how low distance should drop for mouse press to be performed
+const uint16_t L_LEAST_MAX_DIST = 270;
+const uint16_t R_LEAST_MAX_DIST = 225;
 
 int LEFT_SENSOR = 1;
 int RIGHT_SENSOR = 2;
@@ -40,13 +42,13 @@ const int RESET_PIN = 12;
 VL53L0X l_sensor;
 uint16_t l_max_dist = 0;
 uint8_t l_address = 0x30;
-int l_xshut_pin = 9;
+int l_xshut_pin = 10;
 
 // RIGHT
 VL53L0X r_sensor;
 uint16_t r_max_dist = 0;
 uint8_t r_address = 0x38;
-int r_xshut_pin = 10;
+int r_xshut_pin = 9;
 
 int l_prev_state = LOW;
 int r_prev_state = LOW;
@@ -68,6 +70,21 @@ uint16_t get_dist(int sensor_choice) {
         full_reset();
     }
     return dist;
+}
+
+uint16_t get_max_dist(int sensor_choice) {
+    uint16_t least_max_dist;
+    if (sensor_choice == LEFT_SENSOR) {
+        least_max_dist = L_LEAST_MAX_DIST;
+    } else {
+        least_max_dist = R_LEAST_MAX_DIST;
+    }
+
+    uint16_t max_dist = get_dist(sensor_choice);
+    if (max_dist < least_max_dist) {
+        full_reset();
+    }
+    return max_dist;
 }
 
 void full_reset() {
@@ -116,9 +133,9 @@ void init_sensor(int sensor_choice) {
     sensor->startContinuous(TAKE_MEASURE_EVERY);
 
     if (sensor_choice == LEFT_SENSOR) {
-        l_max_dist = get_dist(sensor_choice);
+        l_max_dist = get_max_dist(sensor_choice);
     } else {
-        r_max_dist = get_dist(sensor_choice);
+        r_max_dist = get_max_dist(sensor_choice);
     }
 }
 
