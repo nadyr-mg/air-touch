@@ -8,6 +8,9 @@
 
   Right laser:
   VIN, GND: on breadboard (3.3V)
+  SDA, SCL: pin #2, pin #3
+  XShut: pin #10
+  Reset pin: #12
 */
 
 #include <Wire.h>
