@@ -40,18 +40,19 @@ const int RESET_PIN = 12;
 VL53L0X l_sensor;
 uint16_t l_max_dist = 0;
 uint8_t l_address = 0x30;
-int l_xshut_pin = 9; // ~9
+int l_xshut_pin = 9;
 
 // RIGHT
 VL53L0X r_sensor;
 uint16_t r_max_dist = 0;
 uint8_t r_address = 0x38;
-int r_xshut_pin = 10; // ~10
+int r_xshut_pin = 10;
 
 int l_prev_state = LOW;
 int r_prev_state = LOW;
 
-unsigned long enter_high_state_time = 0;
+unsigned long l_entered_high_time = 0;
+unsigned long r_entered_high_time = 0;
 
 uint16_t get_dist(int sensor_choice) {
     VL53L0X *sensor;
@@ -73,7 +74,7 @@ void full_reset() {
     //digitalWrite(ledPin, HIGH);
     // delay(2000);
     // digitalWrite(ledPin, LOW);
-//    digitalWrite(RESET_PIN, LOW);
+    digitalWrite(RESET_PIN, LOW);
 }
 
 void init_sensor(int sensor_choice) {
@@ -124,7 +125,8 @@ void init_sensor(int sensor_choice) {
 void pin_left() {
     pinMode(l_xshut_pin, OUTPUT);
 }
-void pin_right () {
+
+void pin_right() {
     pinMode(r_xshut_pin, OUTPUT);
 }
 
@@ -161,9 +163,6 @@ void print_dist(int sensor_choice, uint16_t dist) {
     Serial.print("Distance: ");
     Serial.print(dist);
     Serial.print("mm");
-    if (l_sensor.timeoutOccurred()) {
-        Serial.print(" TIMEOUT");
-    }
     Serial.println();
 }
 
@@ -178,20 +177,20 @@ int signal_state(uint16_t dist, uint16_t max_dist) {
     return state;
 }
 
-void mouse_press_action(int state, int mouse) {
+unsigned long mouse_press_action(unsigned long entered_high_time, int state, int mouse) {
     unsigned long cur_time = millis();
     bool is_pressed = Mouse.isPressed(mouse);
 
     if (state == HIGH) {
-        if (enter_high_state_time == 0) {
+        if (entered_high_time == 0) {
             // first entrance
-            enter_high_state_time = cur_time;
+            entered_high_time = cur_time;
             if (is_pressed) {
                 Mouse.release(mouse);
             }
             Mouse.click(mouse);
         }
-        if (cur_time - enter_high_state_time >= TRIGGER_PRESS_TIME) {
+        if (cur_time - entered_high_time >= TRIGGER_PRESS_TIME) {
             if (!is_pressed) {
                 Mouse.press(mouse);
             }
@@ -200,11 +199,13 @@ void mouse_press_action(int state, int mouse) {
         if (is_pressed) {
             Mouse.release(mouse);
         }
-        enter_high_state_time = 0;
+        entered_high_time = 0;
     }
+
+    return entered_high_time;
 }
 
-void mouse_click_action(int prev_state, int state, int mouse) {
+int mouse_click_action(int prev_state, int state, int mouse) {
     if (state == HIGH) {
         if (prev_state == LOW) {
             if (Mouse.isPressed(mouse)) {
@@ -214,17 +215,26 @@ void mouse_click_action(int prev_state, int state, int mouse) {
             delay(INSTANT_CLICK_DELAY);
         }
     }
+
+    return state;
 }
 
-int handle_sensor(int prev_state, int sensor_choice) {
+void handle_sensor(int sensor_choice) {
     uint16_t max_dist;
     int mouse;
+    int prev_state;
+    unsigned long entered_high_time;
+
     if (sensor_choice == LEFT_SENSOR) {
         max_dist = l_max_dist;
         mouse = MOUSE_LEFT;
+        entered_high_time = l_entered_high_time;
+        prev_state = l_prev_state;
     } else {
         max_dist = r_max_dist;
         mouse = MOUSE_RIGHT;
+        entered_high_time = r_entered_high_time;
+        prev_state = r_prev_state;
     }
 
     uint16_t dist = get_dist(sensor_choice);
@@ -232,23 +242,29 @@ int handle_sensor(int prev_state, int sensor_choice) {
     int state = signal_state(dist, max_dist);
 
     if (sensor_choice == RIGHT_SENSOR) {
-        mouse_click_action(prev_state, state, mouse);
+        prev_state = mouse_click_action(prev_state, state, mouse);
     } else {
-        mouse_press_action(state, mouse);
+        entered_high_time = mouse_press_action(entered_high_time, state, mouse);
     }
     if (DEBUG) {
         print_dist(sensor_choice, dist);
     }
 
-    return state;
+    if (sensor_choice == LEFT_SENSOR) {
+        l_entered_high_time = entered_high_time;
+        l_prev_state = prev_state;
+    } else {
+        r_entered_high_time = entered_high_time;
+        r_prev_state = prev_state;
+    }
 }
 
 
 unsigned long loop_count = 0;
 
 void loop() {
-    l_prev_state = handle_sensor(l_prev_state, LEFT_SENSOR);
-    r_prev_state = handle_sensor(r_prev_state, RIGHT_SENSOR);
+    handle_sensor(LEFT_SENSOR);
+    handle_sensor(RIGHT_SENSOR);
 
     if (DEBUG) {
         Serial.println(loop_count);
