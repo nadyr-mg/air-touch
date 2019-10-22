@@ -73,7 +73,7 @@ void full_reset() {
     //digitalWrite(ledPin, HIGH);
     // delay(2000);
     // digitalWrite(ledPin, LOW);
-    // digitalWrite(RESET_PIN, LOW);
+//    digitalWrite(RESET_PIN, LOW);
 }
 
 void init_sensor(int sensor_choice) {
@@ -92,11 +92,9 @@ void init_sensor(int sensor_choice) {
         xshut_pin = r_xshut_pin;
     }
 
-    pinMode(xshut_pin, OUTPUT);
     digitalWrite(xshut_pin, LOW);
-    delay(500);
+    delay(100);
 
-    // left sensor setup
     pinMode(xshut_pin, INPUT);
     delay(150);
     sensor->setAddress(address);
@@ -123,6 +121,12 @@ void init_sensor(int sensor_choice) {
     }
 }
 
+void pin_left() {
+    pinMode(l_xshut_pin, OUTPUT);
+}
+void pin_right () {
+    pinMode(r_xshut_pin, OUTPUT);
+}
 
 void setup() {
     digitalWrite(RESET_PIN, HIGH);
@@ -139,7 +143,10 @@ void setup() {
     // serial port setup
     Serial.begin(9600);
 
-    // setup sensors addresses
+    pin_left();
+    pin_right();
+    delay(500);
+
     init_sensor(LEFT_SENSOR);
     init_sensor(RIGHT_SENSOR);
 }
