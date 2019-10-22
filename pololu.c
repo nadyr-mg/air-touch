@@ -89,6 +89,7 @@ uint16_t get_max_dist(int sensor_choice) {
         if (max_dist < least_max_dist) {
             full_reset();
         }
+        delay(150);
 
         sum += max_dist;
     }
