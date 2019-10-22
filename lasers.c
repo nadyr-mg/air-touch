@@ -53,7 +53,15 @@ int r_prev_state = LOW;
 
 unsigned long enter_high_state_time = 0;
 
-uint16_t get_dist(VL53L0X *sensor) {
+uint16_t get_dist(int sensor_choice) {
+    VL53L0X *sensor;
+
+    if (sensor_choice == LEFT_SENSOR) {
+        sensor = &l_sensor;
+    } else {
+        sensor = &r_sensor;
+    }
+
     uint16_t dist = sensor->readRangeContinuousMillimeters();
     if (dist == -1 || dist == 65535) {
         full_reset();
@@ -107,60 +115,14 @@ void init_sensor(int sensor_choice) {
         Serial.println("Time budget established");
     }
     sensor->startContinuous(TAKE_MEASURE_EVERY);
+
+    if (sensor_choice == LEFT_SENSOR) {
+        l_max_dist = get_dist(sensor_choice);
+    } else {
+        r_max_dist = get_dist(sensor_choice);
+    }
 }
 
-void init_sensors() {
-    pinMode(l_xshut_pin, OUTPUT);
-    digitalWrite(l_xshut_pin, LOW);
-    delay(500);
-
-    // left sensor setup
-    pinMode(l_xshut_pin, INPUT);
-    delay(150);
-    l_sensor.setAddress(l_address);
-
-    bool success = l_sensor.init(true);
-    if (success == false) {
-        full_reset();
-    }
-    delay(100);
-
-    l_sensor.setTimeout(TIMEOUT);
-    success = l_sensor.setMeasurementTimingBudget(TIME_BUDGET);
-    if (success == false) {
-        Serial.println("Can't establish time budget");
-    } else {
-        Serial.println("Time budget established");
-    }
-    l_sensor.startContinuous(TAKE_MEASURE_EVERY);
-
-
-    // right sensor setup
-    pinMode(r_xshut_pin, OUTPUT);
-    digitalWrite(r_xshut_pin, LOW);
-    pinMode(r_xshut_pin, INPUT);
-    delay(150);
-    r_sensor.setAddress(r_address);
-
-    success = r_sensor.init(true);
-    if (success == false) {
-        full_reset();
-    }
-    delay(100);
-
-    // LEFT SENSOR
-
-
-    // RIGHT SENSOR
-    r_sensor.setTimeout(TIMEOUT);
-    success = r_sensor.setMeasurementTimingBudget(TIME_BUDGET);
-    if (success == false) {
-        Serial.println("Can't establish time budget");
-    } else {
-        Serial.println("Time budget established");
-    }
-    r_sensor.startContinuous(TAKE_MEASURE_EVERY);
-}
 
 void setup() {
     digitalWrite(RESET_PIN, HIGH);
@@ -168,7 +130,6 @@ void setup() {
     pinMode(RESET_PIN, OUTPUT);
 
     pinMode(ledPin, OUTPUT);
-    //digitalWrite(ledPin, HIGH);
 
     // mouse setup
     Mouse.begin();
@@ -181,23 +142,6 @@ void setup() {
     // setup sensors addresses
     init_sensor(LEFT_SENSOR);
     init_sensor(RIGHT_SENSOR);
-//    init_sensors();
-
-    l_max_dist = get_dist(&l_sensor);
-    Serial.print("Setup l_max_dist: ");
-    Serial.println(l_max_dist);
-
-    Serial.print("Left sensor address: ");
-    Serial.println(l_sensor.getAddress());
-
-    r_max_dist = get_dist(&r_sensor);
-    Serial.print("Setup r_max_dist: ");
-    Serial.println(r_max_dist);
-
-    Serial.print("Right sensor address: ");
-    Serial.println(r_sensor.getAddress());
-
-    //digitalWrite(ledPin, LOW);
 }
 
 void print_dist(int sensor_choice, uint16_t dist) {
@@ -240,13 +184,11 @@ void mouse_press_action(int state, int mouse) {
             }
             Mouse.click(mouse);
         }
-
         if (cur_time - enter_high_state_time >= TRIGGER_PRESS_TIME) {
             if (!is_pressed) {
                 Mouse.press(mouse);
             }
         }
-
     } else { // state == LOW
         if (is_pressed) {
             Mouse.release(mouse);
@@ -261,7 +203,6 @@ void mouse_click_action(int prev_state, int state, int mouse) {
             if (Mouse.isPressed(mouse)) {
                 Mouse.release(mouse);
             }
-
             Mouse.click(mouse);
             delay(INSTANT_CLICK_DELAY);
         }
@@ -269,20 +210,17 @@ void mouse_click_action(int prev_state, int state, int mouse) {
 }
 
 int handle_sensor(int prev_state, int sensor_choice) {
-    VL53L0X sensor;
     uint16_t max_dist;
     int mouse;
     if (sensor_choice == LEFT_SENSOR) {
-        sensor = l_sensor;
         max_dist = l_max_dist;
         mouse = MOUSE_LEFT;
     } else {
-        sensor = r_sensor;
         max_dist = r_max_dist;
         mouse = MOUSE_RIGHT;
     }
 
-    uint16_t dist = get_dist(&sensor);
+    uint16_t dist = get_dist(sensor_choice);
 
     int state = signal_state(dist, max_dist);
 
@@ -300,15 +238,10 @@ int handle_sensor(int prev_state, int sensor_choice) {
 
 
 unsigned long loop_count = 0;
-unsigned long LOOP_COUNT_RESET = 9000;  // ~15 mins
 
 void loop() {
     l_prev_state = handle_sensor(l_prev_state, LEFT_SENSOR);
     r_prev_state = handle_sensor(r_prev_state, RIGHT_SENSOR);
-
-    // if (loop_count > LOOP_COUNT_RESET) {
-    //   loop_count = 0;
-    // }
 
     if (DEBUG) {
         Serial.println(loop_count);
