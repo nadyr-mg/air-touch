@@ -21,7 +21,7 @@ bool DEBUG = true;
 
 const double PRESSING_BOUNDARY = 0.94; //how low distance should drop for mouse press to be performed
 const uint16_t L_LEAST_MAX_DIST = 280;
-const uint16_t R_LEAST_MAX_DIST = 210;
+const uint16_t R_LEAST_MAX_DIST = 190;
 
 const int INIT_MEASURES = 10;
 
@@ -33,7 +33,7 @@ unsigned long TRIGGER_PRESS_TIME = 600;
 
 // by default sensor measures every ~30 ms
 uint32_t TAKE_MEASURE_EVERY = 80;
-uint16_t TIMEOUT = 500;
+uint16_t TIMEOUT = 150;
 uint32_t TIME_BUDGET = 60000;
 
 const int ledPin = LED_BUILTIN;
