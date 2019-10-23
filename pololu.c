@@ -4,12 +4,12 @@
   Left laser:
   VIN, GND: on breadboard (5V)
   SDA, SCL: SDA, SCL on arduino
-  XShut: pin #9
+  XShut: pin #10
 
   Right laser:
   VIN, GND: on breadboard (5V)
   SDA, SCL: pin #2, pin #3
-  XShut: pin #10
+  XShut: pin #9
   Reset pin: #12
 */
 
@@ -20,8 +20,8 @@
 bool DEBUG = true;
 
 const double PRESSING_BOUNDARY = 0.94; //how low distance should drop for mouse press to be performed
-const uint16_t L_LEAST_MAX_DIST = 210;
-const uint16_t R_LEAST_MAX_DIST = 140;
+const uint16_t L_LEAST_MAX_DIST = 160;
+const uint16_t R_LEAST_MAX_DIST = 170;
 
 const int INIT_MEASURES = 10;
 
