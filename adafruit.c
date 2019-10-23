@@ -14,14 +14,14 @@
 */
 
 #include <Wire.h>
-#include <VL53L0X.h>
+#include "Adafruit_VL53L0X.h"
 #include "Mouse.h"
 
 bool DEBUG = true;
 
-const double PRESSING_BOUNDARY = 0.9; //how low distance should drop for mouse press to be performed
-const uint16_t L_LEAST_MAX_DIST = 100;
-const uint16_t R_LEAST_MAX_DIST = 100;
+const double PRESSING_BOUNDARY = 0.85; //how low distance should drop for mouse press to be performed
+const uint16_t L_LEAST_MAX_DIST = 160;
+const uint16_t R_LEAST_MAX_DIST = 160;
 
 const int INIT_MEASURES = 10;
 
@@ -41,16 +41,18 @@ const int ledPin = LED_BUILTIN;
 const int RESET_PIN = 12;
 
 // LEFT
-VL53L0X l_sensor;
+Adafruit_VL53L0X l_sensor = Adafruit_VL53L0X();
 uint16_t l_max_dist = 0;
 uint8_t l_address = 0x30;
 int l_xshut_pin = 10;
+VL53L0X_RangingMeasurementData_t l_measure;
 
 // RIGHT
-VL53L0X r_sensor;
+Adafruit_VL53L0X r_sensor = Adafruit_VL53L0X();
 uint16_t r_max_dist = 0;
 uint8_t r_address = 0x38;
 int r_xshut_pin = 9;
+VL53L0X_RangingMeasurementData_t r_measure;
 
 int l_prev_state = LOW;
 int r_prev_state = LOW;
@@ -59,16 +61,20 @@ unsigned long l_entered_high_time = 0;
 unsigned long r_entered_high_time = 0;
 
 uint16_t get_dist(int sensor_choice) {
-    VL53L0X *sensor;
+    Adafruit_VL53L0X *sensor;
+    VL53L0X_RangingMeasurementData_t *measure;
 
     if (sensor_choice == LEFT_SENSOR) {
         sensor = &l_sensor;
+        measure = &l_measure;
     } else {
         sensor = &r_sensor;
+        measure = &l_measure;
     }
 
-    uint16_t dist = sensor->readRangeContinuousMillimeters();
-    if (dist == -1 || dist == 65535) {
+    sensor->rangingTest(measure, false);
+    uint16_t dist = (uint16_t)(measure->RangeMilliMeter);
+    if (measure->RangeStatus == 4 || dist == -1 || dist == 8190) {
         full_reset();
     }
     return dist;
@@ -105,50 +111,85 @@ void full_reset() {
     digitalWrite(RESET_PIN, LOW);
 }
 
-void init_sensor(int sensor_choice) {
-    bool success;
-    uint8_t address;
-    int xshut_pin;
-    VL53L0X *sensor;
+void init_sensors() {
+  // all reset
+  digitalWrite(l_xshut_pin, LOW);
+  digitalWrite(r_xshut_pin, LOW);
+  delay(10);
+  // all unreset
+  digitalWrite(l_xshut_pin, HIGH);
+  digitalWrite(r_xshut_pin, HIGH);
+  delay(10);
 
-    if (sensor_choice == LEFT_SENSOR) {
-        sensor = &l_sensor;
-        address = l_address;
-        xshut_pin = l_xshut_pin;
-    } else {
-        sensor = &r_sensor;
-        address = r_address;
-        xshut_pin = r_xshut_pin;
-    }
+  // activating LOX1 and reseting LOX2
+  digitalWrite(l_xshut_pin, HIGH);
+  digitalWrite(r_xshut_pin, LOW);
 
-    digitalWrite(xshut_pin, LOW);
-    delay(100);
+  // initing LOX1
+  if(!l_sensor.begin(l_address)) {
+    Serial.println(F("Failed to boot first VL53L0X"));
+    full_reset();
+  }
+  delay(10);
 
-    pinMode(xshut_pin, INPUT);
-    delay(150);
-    sensor->setAddress(address);
+  // activating LOX2
+  digitalWrite(r_xshut_pin, HIGH);
+  delay(10);
 
-    success = sensor->init(true);
-    if (success == false) {
-        full_reset();
-    }
-    delay(100);
+  //initing LOX2
+  if(!r_sensor.begin(r_address)) {
+    Serial.println(F("Failed to boot second VL53L0X"));
+    full_reset();
+  }
 
-    sensor->setTimeout(TIMEOUT);
-    success = sensor->setMeasurementTimingBudget(TIME_BUDGET);
-    if (success == false) {
-        Serial.println("Can't establish time budget");
-    } else {
-        Serial.println("Time budget established");
-    }
-    sensor->startContinuous(TAKE_MEASURE_EVERY);
-
-    if (sensor_choice == LEFT_SENSOR) {
-        l_max_dist = get_max_dist(sensor_choice);
-    } else {
-        r_max_dist = get_max_dist(sensor_choice);
-    }
+   l_max_dist = get_max_dist(LEFT_SENSOR);
+   r_max_dist = get_max_dist(RIGHT_SENSOR);
 }
+
+//void init_sensor(int sensor_choice) {
+//    bool success;
+//    uint8_t address;
+//    int xshut_pin;
+//    VL53L0X *sensor;
+//
+//    if (sensor_choice == LEFT_SENSOR) {
+//        sensor = &l_sensor;
+//        address = l_address;
+//        xshut_pin = l_xshut_pin;
+//    } else {
+//        sensor = &r_sensor;
+//        address = r_address;
+//        xshut_pin = r_xshut_pin;
+//    }
+//
+//    digitalWrite(xshut_pin, LOW);
+//    delay(100);
+//
+//    pinMode(xshut_pin, INPUT);
+//    delay(150);
+//    sensor->setAddress(address);
+//
+//    success = sensor->init(true);
+//    if (success == false) {
+//        full_reset();
+//    }
+//    delay(100);
+//
+//    sensor->setTimeout(TIMEOUT);
+//    success = sensor->setMeasurementTimingBudget(TIME_BUDGET);
+//    if (success == false) {
+//        Serial.println("Can't establish time budget");
+//    } else {
+//        Serial.println("Time budget established");
+//    }
+//    sensor->startContinuous(TAKE_MEASURE_EVERY);
+//
+//    if (sensor_choice == LEFT_SENSOR) {
+//        l_max_dist = get_max_dist(sensor_choice);
+//    } else {
+//        r_max_dist = get_max_dist(sensor_choice);
+//    }
+//}
 
 void pin_left() {
     pinMode(l_xshut_pin, OUTPUT);
@@ -177,8 +218,9 @@ void setup() {
     pin_right();
     delay(500);
 
-    init_sensor(LEFT_SENSOR);
-    init_sensor(RIGHT_SENSOR);
+    init_sensors();
+//    init_sensor(LEFT_SENSOR);
+//    init_sensor(RIGHT_SENSOR);
 }
 
 void print_dist(int sensor_choice, uint16_t dist) {
