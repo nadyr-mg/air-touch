@@ -29,7 +29,7 @@ int LEFT_SENSOR = 1;
 int RIGHT_SENSOR = 2;
 
 int INSTANT_CLICK_DELAY = 500;
-unsigned long TRIGGER_PRESS_TIME = 600;
+unsigned long TRIGGER_PRESS_TIME = 800;
 
 // by default sensor measures every ~30 ms
 uint32_t TAKE_MEASURE_EVERY = 80;
@@ -89,7 +89,7 @@ uint16_t get_max_dist(int sensor_choice) {
         if (max_dist < least_max_dist) {
             full_reset();
         }
-        delay(150);
+        delay(200);
 
         sum += max_dist;
     }
