@@ -19,7 +19,7 @@
 
 bool DEBUG = true;
 
-const double PRESSING_BOUNDARY = 0.94; //how low distance should drop for mouse press to be performed
+const double PRESSING_BOUNDARY = 0.85; //how low distance should drop for mouse press to be performed
 const uint16_t L_LEAST_MAX_DIST = 160;
 const uint16_t R_LEAST_MAX_DIST = 160;
 
@@ -95,7 +95,7 @@ uint16_t get_max_dist(int sensor_choice) {
         if (max_dist < least_max_dist) {
             full_reset();
         }
-        delay(200);
+        delay(100);
 
         sum += max_dist;
     }
