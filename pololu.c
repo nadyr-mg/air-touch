@@ -67,10 +67,18 @@ uint16_t get_dist(int sensor_choice) {
         sensor = &r_sensor;
     }
 
-    uint16_t dist = sensor->readRangeContinuousMillimeters();
+    uint16_t dist;
+    for(int idx = 0; idx < 3; idx++) {
+        dist = sensor->readRangeContinuousMillimeters();
+        if (dist == 8190) {
+            break;
+        }
+    }
+
     if (dist == -1 || dist == 65535) {
         full_reset();
     }
+
     return dist;
 }
 

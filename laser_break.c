@@ -2,8 +2,9 @@
 
 */
 #include "Mouse.h"
+#include <IRremote.h>
 
-bool DEBUG = true;
+bool DEBUG_MODE = true;
 
 int LEFT_SENSOR = 1;
 int RIGHT_SENSOR = 2;
@@ -13,6 +14,10 @@ unsigned long TRIGGER_PRESS_TIME = 800;
 
 const int LEFT_SENSOR_PIN = 10;
 const int RIGHT_SENSOR_PIN = 11;
+
+IRrecv l_irrecv(LEFT_SENSOR_PIN);
+
+decode_results results;
 
 int l_prev_state = LOW;
 int r_prev_state = LOW;
@@ -24,8 +29,9 @@ void setup() {
     Mouse.begin();
     Serial.begin(9600);
 
-    pinMode(LEFT_SENSOR_PIN, INPUT);
-    pinMode(RIGHT_SENSOR_PIN, INPUT);
+//    pinMode(LEFT_SENSOR_PIN, INPUT);
+//    pinMode(RIGHT_SENSOR_PIN, INPUT);
+    l_irrecv.enableIRIn();
 }
 
 void handle_sensor(int sensor_choice) {
@@ -49,7 +55,7 @@ void handle_sensor(int sensor_choice) {
     } else {
         entered_high_time = mouse_press_action(entered_high_time, state, mouse);
     }*/
-    if (DEBUG) {
+    if (DEBUG_MODE) {
         print_state(sensor_choice, state);
     }
 
@@ -79,15 +85,19 @@ void print_state(int sensor_choice, int state) {
 }
 
 int signal_state(int sensor_choice) {
-    int state;
+    int state = LOW;
     if (sensor_choice == LEFT_SENSOR) {
-        state = digitalRead(LEFT_SENSOR_PIN);
+        if (l_irrecv.decode(&results)) {
+            Serial.println(results.value, HEX);
+            l_irrecv.resume(); // get the next signal
+        }
     } else {
         state = digitalRead(RIGHT_SENSOR_PIN);
     }
 
     // invert the value
-    return state == LOW ? HIGH: LOW;
+    //return state == LOW ? HIGH: LOW;
+    return state;
 }
 
 unsigned long mouse_press_action(unsigned long entered_high_time, int state, int mouse) {
@@ -138,7 +148,7 @@ void loop() {
     handle_sensor(LEFT_SENSOR);
 //    handle_sensor(RIGHT_SENSOR);
 
-    if (DEBUG) {
+    if (DEBUG_MODE) {
         Serial.println(loop_count);
     }
 
